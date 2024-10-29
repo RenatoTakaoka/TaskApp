@@ -1,21 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:todo_app/pages/task_create/task_create_page.dart';
+import 'package:todo_app/pages/task_list/widgets/delete_task.dart';
 import 'package:todo_app/pages/task_list/widgets/task_widget.dart';
+import 'package:todo_app/providers/task_group_provider.dart';
 import 'package:todo_app/providers/task_provider.dart';
 
 class TaskListPage extends StatefulWidget {
-  final String groupId;
-  const TaskListPage({super.key,required this.groupId});
+  const TaskListPage({super.key});
 
   @override
   State<TaskListPage> createState() => _TaskListPageState();
 }
 
 class _TaskListPageState extends State<TaskListPage> {
+  late final TaskGroupProvider taskGroupProvider;
+  late final TaskProvider taskProvider;
+
   @override
   void initState() {
-    final taskProvider = context.read<TaskProvider>();
-    taskProvider.listTasksByGroup(widget.groupId);
+    taskProvider = context.read<TaskProvider>();
+    taskGroupProvider = context.read<TaskGroupProvider>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      taskProvider.listTasksByGroup(taskGroupProvider.selectedTaskGroup!.id);
+    });
     super.initState();
   }
 
@@ -23,6 +31,7 @@ class _TaskListPageState extends State<TaskListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        title: Text(taskGroupProvider.selectedTaskGroup!.name),
         actions: [
           IconButton(
             onPressed: () {},
@@ -30,25 +39,67 @@ class _TaskListPageState extends State<TaskListPage> {
           ),
         ],
       ),
-      body: Consumer<TaskProvider> (
-        builder: (context, provider, _) {
-          if(provider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-          return ListView.builder(
-            itemCount: provider.tasks.length,
-            itemBuilder: (context, index) {
-              return ListTile(
-                title: TaskWidget(task: provider.tasks[index], color: Colors.red,)
-              ); 
-            },
+      body: Consumer<TaskProvider>(builder: (context, taskProvider, _) {
+        if (taskProvider.isLoading) {
+          return Center(
+            child: CircularProgressIndicator(
+              color: Color(taskGroupProvider.selectedTaskGroup!.color),
+            ),
+          );
+        }
+
+        return Column(
+          children: [
+            Expanded(
+                child: ListView.builder(
+                    itemCount: taskProvider.tasks.length,
+                    itemBuilder: (context, index) {
+                      final task = taskProvider.tasks[index];
+                      return Dismissible(
+                        key: Key(task.id),
+                        background: const DeleteTask(),
+                        direction: DismissDirection.startToEnd,
+                        onDismissed:(direction) {
+                          taskProvider.deleteTask(task.id);
+                        },
+                        confirmDismiss: (direction) {
+                          return showDialog(context: context, builder: (context) {
+                            return AlertDialog(
+                              title: const Text('Delete task'),
+                              content: const Text('Tem certeza que deseja excluir?'),
+                              actions: [
+                                TextButton(onPressed: () {
+                                  Navigator.of(context).pop(false);
+                                }, child: const Text('Não'),
+                                ),
+                                TextButton(onPressed: () {
+                                  Navigator.of(context).pop(true);
+                                }, child: const Text('Sim'),
+                                ),
+                              ],
+                          );
+                          });
+                        },
+                        child: TaskWidget(
+                          task: task,
+                          color:
+                              Color(taskGroupProvider.selectedTaskGroup!.color),
+                        ),
+                      );
+                    })),
+          ],
+        );
+      }),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (BuildContext context) {
+              return TaskCreatePage(
+                groupId: taskGroupProvider.selectedTaskGroup!.id,
+              );
+            }),
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
         child: const Icon(Icons.add),
       ),
     );
