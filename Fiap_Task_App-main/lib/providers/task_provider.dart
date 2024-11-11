@@ -34,10 +34,21 @@ class TaskProvider with ChangeNotifier {
     }
   }
 
-  Future<void> deleteTask(String id) async {
+  Future<void> deleteTask(String taskId) async {
     try {
-      await _repo.deleteTask(id);
-      _tasks.removeWhere((task) => task.id == id);
+      await _repo.deleteTask(taskId);
+      _tasks.removeWhere((task) => task.id == taskId);
+      notifyListeners();
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  Future<void> updateTask(Task task) async {
+    try {
+      await _repo.updateTask(task);
+      final index = _tasks.indexWhere((t) => t.id == task.id);
+      _tasks[index] = task;
       notifyListeners();
     } catch (e) {
       print(e);

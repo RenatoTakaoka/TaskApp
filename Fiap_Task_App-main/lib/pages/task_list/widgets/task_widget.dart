@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:todo_app/models/task_model.dart';
+import 'package:todo_app/providers/task_provider.dart';
 
 class TaskWidget extends StatelessWidget {
   const TaskWidget({super.key, required this.task, required this.color});
@@ -9,10 +11,16 @@ class TaskWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final TaskProvider taskProvider = context.read<TaskProvider>();
+
+    bool taskIsCompleted;
     return ListTile(
       onTap: () {},
       leading: GestureDetector(
-        onTap: () {},
+        onTap: () {
+          taskIsCompleted = !task.isCompleted;
+          taskProvider.updateTask(task.copyWith(isCompleted: taskIsCompleted));
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 600),
           decoration: BoxDecoration(

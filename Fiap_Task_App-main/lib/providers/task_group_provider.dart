@@ -7,8 +7,8 @@ class TaskGroupProvider extends ChangeNotifier {
 
   TaskGroup? selectedTaskGroup;
 
-  List<TaskGroup> _taskGroups = [];
-  List<TaskGroup> get taskGroups => _taskGroups;
+  List<TaskGroupWithCounts> _taskGroupsWithCounts = [];
+  List<TaskGroupWithCounts> get taskGroupsWithCounts => _taskGroupsWithCounts;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -17,11 +17,35 @@ class TaskGroupProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      _taskGroups = await _repo.listTaskGroups();
+      _taskGroupsWithCounts = await _repo.listTaskGroupsWithCounts();
     } catch (e) {
       print(e);
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> createTaskGroup(TaskGroup taskGroup) async {
+    try {
+      await _repo.createGroup(taskGroup);
+      await listTaskGroups();
+    } catch (e) {
+      print(e);
+    }
+    finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteTaskGroup(String groupId) async {
+    try {
+      await _repo.deleteTaskGroup(groupId);
+      await listTaskGroups();
+    } catch (e) {
+      print(e);
+    }
+    finally {
       notifyListeners();
     }
   }

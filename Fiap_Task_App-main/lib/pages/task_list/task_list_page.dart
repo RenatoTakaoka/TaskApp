@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:todo_app/models/task_group.dart';
 import 'package:todo_app/pages/task_create/task_create_page.dart';
 import 'package:todo_app/pages/task_list/widgets/delete_task.dart';
 import 'package:todo_app/pages/task_list/widgets/task_widget.dart';
+import 'package:todo_app/pages/task_list/widgets/tasks_summary_widget.dart';
 import 'package:todo_app/providers/task_group_provider.dart';
 import 'package:todo_app/providers/task_provider.dart';
 
@@ -15,23 +17,25 @@ class TaskListPage extends StatefulWidget {
 
 class _TaskListPageState extends State<TaskListPage> {
   late final TaskGroupProvider taskGroupProvider;
-  late final TaskProvider taskProvider;
+  late TaskGroupWithCounts taskGroupWithCounts;
 
   @override
   void initState() {
-    taskProvider = context.read<TaskProvider>();
+    final taskProvider = context.read<TaskProvider>();
     taskGroupProvider = context.read<TaskGroupProvider>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       taskProvider.listTasksByGroup(taskGroupProvider.selectedTaskGroup!.id);
     });
     super.initState();
+    taskGroupWithCounts = taskGroupProvider.taskGroupsWithCounts.firstWhere(
+      (task) => task.taskGroup.id == taskGroupProvider.selectedTaskGroup!.id,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(taskGroupProvider.selectedTaskGroup!.name),
         actions: [
           IconButton(
             onPressed: () {},
@@ -50,43 +54,65 @@ class _TaskListPageState extends State<TaskListPage> {
 
         return Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+              child: TasksSummaryWidget(
+                title: taskGroupProvider.selectedTaskGroup!.name,
+                color: taskGroupProvider.selectedTaskGroup!.color,
+                numberOfTasks: taskGroupWithCounts,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Divider(
+                color: Colors.grey.shade300,
+                height: 1,
+              ),
+            ),
             Expanded(
-                child: ListView.builder(
-                    itemCount: taskProvider.tasks.length,
-                    itemBuilder: (context, index) {
-                      final task = taskProvider.tasks[index];
-                      return Dismissible(
-                        key: Key(task.id),
-                        background: const DeleteTask(),
-                        direction: DismissDirection.startToEnd,
-                        onDismissed:(direction) {
-                          taskProvider.deleteTask(task.id);
-                        },
-                        confirmDismiss: (direction) {
-                          return showDialog(context: context, builder: (context) {
-                            return AlertDialog(
-                              title: const Text('Delete task'),
-                              content: const Text('Tem certeza que deseja excluir?'),
-                              actions: [
-                                TextButton(onPressed: () {
+              child: ListView.builder(
+                itemCount: taskProvider.tasks.length,
+                itemBuilder: (context, index) {
+                  final task = taskProvider.tasks[index];
+                  return Dismissible(
+                    key: Key(task.id),
+                    background: const DeleteTask(),
+                    onDismissed: (direction) {
+                      taskProvider.deleteTask(task.id);
+                    },
+                    confirmDismiss: (direction) {
+                      return showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text('Delete Task'),
+                            content: const Text('Are you sure you want to delete this task?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
                                   Navigator.of(context).pop(false);
-                                }, child: const Text('Não'),
-                                ),
-                                TextButton(onPressed: () {
+                                },
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () {
                                   Navigator.of(context).pop(true);
-                                }, child: const Text('Sim'),
-                                ),
-                              ],
+                                },
+                                child: const Text('Delete'),
+                              ),
+                            ],
                           );
-                          });
                         },
-                        child: TaskWidget(
-                          task: task,
-                          color:
-                              Color(taskGroupProvider.selectedTaskGroup!.color),
-                        ),
                       );
-                    })),
+                    },
+                    child: TaskWidget(
+                      task: task,
+                      color: Color(taskGroupProvider.selectedTaskGroup!.color),
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
         );
       }),
@@ -103,10 +129,5 @@ class _TaskListPageState extends State<TaskListPage> {
         child: const Icon(Icons.add),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 }
